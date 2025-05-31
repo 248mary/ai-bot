@@ -51,23 +51,21 @@ async def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    await app.initialize()  # Явно инициализируем приложение
-    await app.start()       # Явно стартуем polling
+    await app.initialize()
+    await app.start()
 
     print("Бот запущен и слушает сообщения...")
 
-    try:
-        # Ждем, пока пользователь не остановит приложение (Ctrl+C)
-        await app.updater.idle()
-    finally:
-        # При завершении корректно завершаем работу
-        await app.stop()
-        await app.shutdown()
-        print("Бот остановлен")
+    # Ждём, пока приложение не будет остановлено (например, Ctrl+C)
+    await app.wait_closed()
+
+    await app.stop()
+    await app.shutdown()
+    print("Бот остановлен")
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except RuntimeError:
-        # Для окружений с уже запущенным event loop (Railway)
-        loop = asyncio.get_event_
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(main())
