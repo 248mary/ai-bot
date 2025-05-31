@@ -41,10 +41,29 @@ async def handle_message(update, context):
                 json=payload
             ) as response:
                 result = await response.json()
-                reply = result["choices"][0]["message"]["content"]
-                await update.message.reply_text(reply)
+                print("OpenRouter API response:", result)  # Лог в консоль
+
+                # Проверка структуры ответа
+                if (
+                    "choices" in result and
+                    len(result["choices"]) > 0 and
+                    "message" in result["choices"][0] and
+                    "content" in result["choices"][0]["message"]
+                ):
+                    reply = result["choices"][0]["message"]["content"]
+                    await update.message.reply_text(reply)
+                else:
+                    # Если структура неожиданная — сообщаем в чат
+                    err_msg = (
+                        "Не удалось получить ответ от AI. "
+                        "Пожалуйста, свяжитесь с @ar248fi."
+                    )
+                    await update.message.reply_text(err_msg)
+                    print("Ошибка: некорректный ответ API:", result)
+
     except Exception as e:
-        await update.message.reply_text("Произошла ошибка при обращении к AI. Попробуй позже.")
+        err_text = f"Ошибка при обращении к AI: {e}. Пожалуйста, свяжитесь с @ar248fi."
+        await update.message.reply_text(err_text)
         print("Ошибка при обращении к OpenRouter:", e)
 
 async def main():
@@ -57,7 +76,6 @@ async def main():
 
     print("Бот запущен и слушает сообщения...")
 
-    # Событие для остановки
     stop_event = asyncio.Event()
 
     def shutdown():
@@ -65,14 +83,11 @@ async def main():
         stop_event.set()
 
     loop = asyncio.get_running_loop()
-    # Регистрируем обработчики системных сигналов
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, shutdown)
 
-    # Ждём сигнала остановки
     await stop_event.wait()
 
-    # Корректно останавливаем и завершаем приложение
     await app.stop()
     await app.shutdown()
     print("Бот остановлен")
