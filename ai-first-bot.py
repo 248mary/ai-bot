@@ -1,8 +1,9 @@
 import os
+import signal
+import asyncio
 from dotenv import load_dotenv
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters
 import aiohttp
-import asyncio
 
 load_dotenv()
 
@@ -56,9 +57,22 @@ async def main():
 
     print("Бот запущен и слушает сообщения...")
 
-    # Ждём, пока приложение не будет остановлено (например, Ctrl+C)
-    await app.wait_closed()
+    # Событие для остановки
+    stop_event = asyncio.Event()
 
+    def shutdown():
+        print("Получен сигнал остановки, завершаем работу...")
+        stop_event.set()
+
+    loop = asyncio.get_running_loop()
+    # Регистрируем обработчики системных сигналов
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(sig, shutdown)
+
+    # Ждём сигнала остановки
+    await stop_event.wait()
+
+    # Корректно останавливаем и завершаем приложение
     await app.stop()
     await app.shutdown()
     print("Бот остановлен")
